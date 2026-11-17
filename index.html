@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portfolio — Younseo Lee</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: #111;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    #viewer-container {
+      width: 100vw;
+      height: calc(100vh - 56px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    canvas {
+      max-width: 96%;
+      max-height: 94%;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+    }
+    #controls {
+      height: 56px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      font-size: 14px;
+      letter-spacing: 0.05em;
+    }
+    button {
+      background: #222;
+      color: #fff;
+      border: 1px solid #444;
+      padding: 6px 16px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    button:hover { background: #333; }
+    button:disabled { opacity: 0.3; cursor: default; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</head>
+<body>
+  <div id="viewer-container">
+    <canvas id="pdf-render"></canvas>
+  </div>
+  <div id="controls">
+    <button id="prev">◀ PREV</button>
+    <span><span id="page-num">1</span> / <span id="page-count">-</span></span>
+    <button id="next">NEXT ▶</button>
+  </div>
+
+  <script>
+    const url = './portfolio.pdf'; // 올린 PDF 파일명과 일치해야 함
+    const pdfjsLib = window['pdfjs-dist/build/pdf'];
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    let pdfDoc = null, pageNum = 1, pageRendering = false, pageNumPending = null;
+    const canvas = document.getElementById('pdf-render'), ctx = canvas.getContext('2d');
+
+    function renderPage(num) {
+      pageRendering = true;
+      pdfDoc.getPage(num).then(page => {
+        const scale = 2; // 고해상도 렌더링
+        const viewport = page.getViewport({ scale });
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        page.render({ canvasContext: ctx, viewport }).promise.then(() => {
+          pageRendering = false;
+          if (pageNumPending !== null) { renderPage(pageNumPending); pageNumPending = null; }
+        });
+      });
+      document.getElementById('page-num').textContent = num;
+      document.getElementById('prev').disabled = (num <= 1);
+      document.getElementById('next').disabled = (num >= pdfDoc.numPages);
+    }
+
+    function queueRenderPage(num) {
+      pageRendering ? pageNumPending = num : renderPage(num);
+    }
+
+    document.getElementById('prev').addEventListener('click', () => { if (pageNum > 1) queueRenderPage(--pageNum); });
+    document.getElementById('next').addEventListener('click', () => { if (pageNum < pdfDoc.numPages) queueRenderPage(++pageNum); });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'ArrowLeft' && pageNum > 1) queueRenderPage(--pageNum);
+      if (e.key === 'ArrowRight' && pageNum < pdfDoc.numPages) queueRenderPage(++pageNum);
+    });
+
+    pdfjsLib.getDocument(url).promise.then(pdf => {
+      pdfDoc = pdf;
+      document.getElementById('page-count').textContent = pdf.numPages;
+      renderPage(pageNum);
+    });
+  </script>
+</body>
+</html>
