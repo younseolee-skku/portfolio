@@ -3,84 +3,197 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Portfolio — Younseo Lee</title>
+  <title>YOUNSEO LEE — Portfolio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      background-color: #111;
-      color: #fff;
-      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #FAFAFA;
+      color: #111111;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       height: 100vh;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
+      justify-content: space-between;
       overflow: hidden;
+      -webkit-font-smoothing: antialiased;
     }
+
+    /* 상단 미니멀 갤러리 헤더 */
+    header {
+      height: 52px;
+      padding: 0 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #EAEAEA;
+      background: #FFFFFF;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #555555;
+    }
+    .brand {
+      font-weight: 500;
+      color: #111111;
+    }
+    .subtitle {
+      font-weight: 300;
+      color: #888888;
+    }
+
+    /* 중앙 캔버스(슬라이드) 영역 */
     #viewer-container {
+      flex: 1;
       width: 100vw;
-      height: calc(100vh - 56px);
       display: flex;
       align-items: center;
       justify-content: center;
+      padding: 24px;
+      position: relative;
     }
     canvas {
-      max-width: 96%;
-      max-height: 94%;
-      box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+      max-width: 100%;
+      max-height: 100%;
+      background: #FFFFFF;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+      border-radius: 2px;
+      transition: opacity 0.2s ease;
     }
-    #controls {
+    #loader {
+      position: absolute;
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      color: #888888;
+      text-transform: uppercase;
+    }
+
+    /* 하단 컨트롤 바 */
+    footer {
       height: 56px;
+      padding: 0 32px;
       display: flex;
       align-items: center;
-      gap: 20px;
-      font-size: 14px;
-      letter-spacing: 0.05em;
+      justify-content: space-between;
+      border-top: 1px solid #EAEAEA;
+      background: #FFFFFF;
+      font-size: 12px;
+      letter-spacing: 0.06em;
+    }
+    .nav-group {
+      display: flex;
+      align-items: center;
+      gap: 16px;
     }
     button {
-      background: #222;
-      color: #fff;
-      border: 1px solid #444;
-      padding: 6px 16px;
+      background: transparent;
+      color: #111111;
+      border: 1px solid #DCDCDC;
+      padding: 6px 14px;
+      font-size: 11px;
+      font-family: inherit;
+      letter-spacing: 0.08em;
       cursor: pointer;
-      border-radius: 4px;
+      border-radius: 2px;
+      transition: all 0.15s ease;
     }
-    button:hover { background: #333; }
-    button:disabled { opacity: 0.3; cursor: default; }
+    button:hover:not(:disabled) {
+      background: #111111;
+      color: #FFFFFF;
+      border-color: #111111;
+    }
+    button:disabled {
+      opacity: 0.25;
+      cursor: default;
+    }
+    .page-indicator {
+      min-width: 64px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      color: #444444;
+    }
+    .download-link {
+      color: #666666;
+      text-decoration: none;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      border-bottom: 1px solid transparent;
+      transition: all 0.15s ease;
+    }
+    .download-link:hover {
+      color: #111111;
+      border-bottom-color: #111111;
+    }
+
+    @media (max-width: 640px) {
+      header, footer { padding: 0 16px; }
+      .subtitle { display: none; }
+      #viewer-container { padding: 12px; }
+    }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 <body>
-  <div id="viewer-container">
+
+  <header>
+    <span class="brand">YOUNSEO LEE</span>
+    <span class="subtitle">Self-Driven Boundary-Crossing Learner</span>
+  </header>
+
+  <main id="viewer-container">
+    <div id="loader">Loading Portfolio...</div>
     <canvas id="pdf-render"></canvas>
-  </div>
-  <div id="controls">
-    <button id="prev">◀ PREV</button>
-    <span><span id="page-num">1</span> / <span id="page-count">-</span></span>
-    <button id="next">NEXT ▶</button>
-  </div>
+  </main>
+
+  <footer>
+    <div class="nav-group">
+      <button id="prev">PREV</button>
+      <span class="page-indicator"><span id="page-num">01</span> / <span id="page-count">--</span></span>
+      <button id="next">NEXT</button>
+    </div>
+    <a id="download-btn" class="download-link" download>DOWNLOAD PDF ↗</a>
+  </footer>
 
   <script>
-    const url = './portfolio.pdf'; // 올린 PDF 파일명과 일치해야 함
+    const rawFileName = 'LEE YOUNSEO-Portfolio-Apple_compressed.pdf';
+    const url = './' + encodeURIComponent(rawFileName);
+    document.getElementById('download-btn').href = url;
+
     const pdfjsLib = window['pdfjs-dist/build/pdf'];
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
     let pdfDoc = null, pageNum = 1, pageRendering = false, pageNumPending = null;
-    const canvas = document.getElementById('pdf-render'), ctx = canvas.getContext('2d');
+    const canvas = document.getElementById('pdf-render');
+    const ctx = canvas.getContext('2d');
+    const loader = document.getElementById('loader');
+
+    function formatNum(n) {
+      return n < 10 ? '0' + n : n;
+    }
 
     function renderPage(num) {
       pageRendering = true;
+      canvas.style.opacity = '0.4';
+
       pdfDoc.getPage(num).then(page => {
-        const scale = 2; // 고해상도 렌더링
-        const viewport = page.getViewport({ scale });
+        const viewport = page.getViewport({ scale: 2.2 });
         canvas.height = viewport.height;
         canvas.width = viewport.width;
+
         page.render({ canvasContext: ctx, viewport }).promise.then(() => {
           pageRendering = false;
-          if (pageNumPending !== null) { renderPage(pageNumPending); pageNumPending = null; }
+          canvas.style.opacity = '1';
+          loader.style.display = 'none';
+          if (pageNumPending !== null) {
+            renderPage(pageNumPending);
+            pageNumPending = null;
+          }
         });
       });
-      document.getElementById('page-num').textContent = num;
+
+      document.getElementById('page-num').textContent = formatNum(num);
       document.getElementById('prev').disabled = (num <= 1);
       document.getElementById('next').disabled = (num >= pdfDoc.numPages);
     }
@@ -89,17 +202,39 @@
       pageRendering ? pageNumPending = num : renderPage(num);
     }
 
-    document.getElementById('prev').addEventListener('click', () => { if (pageNum > 1) queueRenderPage(--pageNum); });
-    document.getElementById('next').addEventListener('click', () => { if (pageNum < pdfDoc.numPages) queueRenderPage(++pageNum); });
+    document.getElementById('prev').addEventListener('click', () => {
+      if (pageNum > 1) queueRenderPage(--pageNum);
+    });
+    document.getElementById('next').addEventListener('click', () => {
+      if (pageNum < pdfDoc.numPages) queueRenderPage(++pageNum);
+    });
+
+    // 키보드 좌우 화살표 및 스페이스바 이동 지원
     document.addEventListener('keydown', e => {
       if (e.key === 'ArrowLeft' && pageNum > 1) queueRenderPage(--pageNum);
-      if (e.key === 'ArrowRight' && pageNum < pdfDoc.numPages) queueRenderPage(++pageNum);
+      if ((e.key === 'ArrowRight' || e.key === ' ') && pageNum < pdfDoc.numPages) {
+        e.preventDefault();
+        queueRenderPage(++pageNum);
+      }
+    });
+
+    // 모바일 터치 스와이프 지원
+    let touchStartX = 0;
+    document.getElementById('viewer-container').addEventListener('touchstart', e => {
+      touchStartX = e.changedTouches[0].screenX;
+    });
+    document.getElementById('viewer-container').addEventListener('touchend', e => {
+      const diff = touchStartX - e.changedTouches[0].screenX;
+      if (diff > 40 && pageNum < pdfDoc.numPages) queueRenderPage(++pageNum);
+      if (diff < -40 && pageNum > 1) queueRenderPage(--pageNum);
     });
 
     pdfjsLib.getDocument(url).promise.then(pdf => {
       pdfDoc = pdf;
-      document.getElementById('page-count').textContent = pdf.numPages;
+      document.getElementById('page-count').textContent = formatNum(pdf.numPages);
       renderPage(pageNum);
+    }).catch(err => {
+      loader.textContent = '파일을 불러올 수 없습니다: ' + rawFileName;
     });
   </script>
 </body>
