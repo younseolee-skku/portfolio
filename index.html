@@ -210,4 +210,92 @@
       <span class="page-indicator"><span id="page-num">01</span> / <span id="page-count">--</span></span>
       <button id="next" class="text-btn">NEXT</button>
     </div>
-    <a id="download-btn" class="download-link" download>DOWNLOAD PDF ↗</a>
+    <a id="download-btn" class="download-link" href="./portfolio.pdf" download="YOUNSEO_LEE_Portfolio.pdf">DOWNLOAD PDF ↗</a>
+  </footer>
+
+  <script>
+    const url = './portfolio.pdf';
+
+    const pdfjsLib = window['pdfjs-dist/build/pdf'];
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    let pdfDoc = null, pageNum = 1, pageRendering = false, pageNumPending = null;
+    const canvas = document.getElementById('pdf-render');
+    const ctx = canvas.getContext('2d');
+    const loader = document.getElementById('loader');
+
+    const prevBtns = [document.getElementById('prev'), document.getElementById('side-prev')];
+    const nextBtns = [document.getElementById('next'), document.getElementById('side-next')];
+
+    function formatNum(n) {
+      return n < 10 ? '0' + n : n;
+    }
+
+    function updateButtons(num) {
+      prevBtns.forEach(btn => btn.disabled = (num <= 1));
+      nextBtns.forEach(btn => btn.disabled = (num >= pdfDoc.numPages));
+    }
+
+    function renderPage(num) {
+      pageRendering = true;
+      canvas.style.opacity = '0.45';
+
+      pdfDoc.getPage(num).then(page => {
+        const viewport = page.getViewport({ scale: 2.2 });
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        page.render({ canvasContext: ctx, viewport }).promise.then(() => {
+          pageRendering = false;
+          canvas.style.opacity = '1';
+          loader.style.display = 'none';
+          if (pageNumPending !== null) {
+            renderPage(pageNumPending);
+            pageNumPending = null;
+          }
+        });
+      });
+
+      document.getElementById('page-num').textContent = formatNum(num);
+      updateButtons(num);
+    }
+
+    function queueRenderPage(num) {
+      pageRendering ? pageNumPending = num : renderPage(num);
+    }
+
+    prevBtns.forEach(btn => btn.addEventListener('click', () => {
+      if (pageNum > 1) queueRenderPage(--pageNum);
+    }));
+    nextBtns.forEach(btn => btn.addEventListener('click', () => {
+      if (pageNum < pdfDoc.numPages) queueRenderPage(++pageNum);
+    }));
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'ArrowLeft' && pageNum > 1) queueRenderPage(--pageNum);
+      if ((e.key === 'ArrowRight' || e.key === ' ') && pageNum < pdfDoc.numPages) {
+        e.preventDefault();
+        queueRenderPage(++pageNum);
+      }
+    });
+
+    let touchStartX = 0;
+    document.getElementById('viewer-container').addEventListener('touchstart', e => {
+      touchStartX = e.changedTouches[0].screenX;
+    });
+    document.getElementById('viewer-container').addEventListener('touchend', e => {
+      const diff = touchStartX - e.changedTouches[0].screenX;
+      if (diff > 40 && pageNum < pdfDoc.numPages) queueRenderPage(++pageNum);
+      if (diff < -40 && pageNum > 1) queueRenderPage(--pageNum);
+    });
+
+    pdfjsLib.getDocument(url).promise.then(pdf => {
+      pdfDoc = pdf;
+      document.getElementById('page-count').textContent = formatNum(pdf.numPages);
+      renderPage(pageNum);
+    }).catch(err => {
+      loader.textContent = '파일을 불러올 수 없습니다: ' + err.message;
+    });
+  </script>
+</body>
+</html>
